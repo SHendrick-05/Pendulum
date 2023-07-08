@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Collections.Generic;
 
 namespace MathematicalPendulum
 {
@@ -17,11 +18,37 @@ namespace MathematicalPendulum
         internal Vector2 endpoint;
         // 100 pixels = 1m
 
-        internal double theta = Math.PI + 0.001;
+        internal static MouseState mouseState;
+        internal static MouseState lastMouseState;
+
+        internal static double initialTheta = 1;
+        internal static double initialOmega = 0;
+
+        internal static bool isReset = false;
+
+        internal static List<Button> buttons;
+
+        /// <summary>
+        /// The angular displacement of the pendulum
+        /// </summary>
+        internal double theta = 1;
+        /// <summary>
+        /// The angular velocity of the pendulum.
+        /// </summary>
         internal double omega = 0;
+        /// <summary>
+        /// The strength of gravity experienced
+        /// </summary>
         internal double g = 9.81;
+        /// <summary>
+        /// The length of the string in pixels
+        /// </summary>
         internal double length = 200;
+        /// <summary>
+        /// The rate of energy loss
+        /// </summary>
         internal double mu = 0.2;
+
 
         public Game1()
         {
@@ -44,6 +71,7 @@ namespace MathematicalPendulum
             }
             rectangle.SetData(data);
 
+            buttons = new List<Button>();
 
             base.Initialize();
         }
@@ -51,6 +79,9 @@ namespace MathematicalPendulum
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
+
+            Button btn = new Button(10, 10, 100, 30, "reset");
+            buttons.Add(btn);
 
             // TODO: use this.Content to load your game content here
         }
@@ -60,16 +91,33 @@ namespace MathematicalPendulum
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            // Update the angles.
             double deltaT = gameTime.ElapsedGameTime.TotalSeconds;
             double tempTheta = theta;
             double tempOmega = omega;
             theta += deltaT * tempOmega;
             omega += deltaT * (-1 * mu * tempOmega - 100 * (g / length) * Math.Sin(tempTheta));
 
+            // Update the positions
             endpoint = origin;
             endpoint.X += (float)(length * Math.Cos(theta + (Math.PI / 2d)));
             endpoint.Y += (float)(length * Math.Sin(theta + (Math.PI / 2d)));
 
+            // Update input
+            lastMouseState = mouseState;
+            mouseState = Mouse.GetState();
+
+            // Update buttons
+            foreach(Button btn in buttons)
+            {
+                btn.Update(gameTime);
+            }
+            if (isReset)
+            {
+                isReset = false;
+                omega = initialOmega;
+                theta = initialTheta;
+            }
             base.Update(gameTime);
         }
 
@@ -101,6 +149,15 @@ namespace MathematicalPendulum
                 Vector2.One * 0.5f,
                 SpriteEffects.None,
                 0f);
+
+            // Draw buttons
+            foreach (Button btn in buttons)
+            {
+                _spriteBatch.Draw(
+                    rectangle,
+                    new Rectangle(btn.position, btn.size),
+                    Color.DarkGray);
+            }
 
             _spriteBatch.End();
             base.Draw(gameTime);
